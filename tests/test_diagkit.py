@@ -126,6 +126,29 @@ class TestRender(unittest.TestCase):
         render_spec(SAMPLES["sequence"], target, scale=1.0)
         self.assertTrue(os.path.exists(target))
 
+    def test_direction_right_renders_horizontally(self):
+        """direction=right 必须把层沿 x 推进：修横向布局前这里会渲染成竖图。"""
+        spec = {
+            "kind": "flowchart",
+            "direction": "right",
+            "items": [
+                {"id": "a", "shape": "start", "text": "开始"},
+                {"id": "b", "text": "处理"},
+                {"id": "c", "shape": "decision", "text": "判断"},
+                {"id": "d", "shape": "end", "text": "结束"},
+            ],
+            "links": [
+                {"from": "a", "to": "b"},
+                {"from": "b", "to": "c"},
+                {"from": "c", "to": "d"},
+            ],
+        }
+        path = render_spec(spec, os.path.join(self.tmp, "right.png"), scale=1.0)
+        with Image.open(path) as img:
+            self.assertGreater(
+                img.width, img.height,
+                "direction=right 应渲染为宽图，实际 %dx%d" % (img.width, img.height))
+
 
 class TestGeometry(unittest.TestCase):
     def test_text_fits_inside_box(self):

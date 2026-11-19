@@ -13,12 +13,19 @@ from __future__ import annotations
 
 from typing import Dict, List, Sequence, Tuple
 
-from .model import Diagram, Node
+from .model import Diagram, Measurer, Node
 
 
 def layered(diagram: Diagram, x0: float = 120, y0: float = 120,
-            dx: float = 260, dy: float = 130, center: bool = True) -> None:
-    """按最长路径分层。已显式给出坐标的节点不参与。"""
+            dx: float = 260, dy: float = 130, center: bool = True,
+            orientation: str = "vertical") -> None:
+    """按最长路径分层。已显式给出坐标的节点不参与。
+
+    ``orientation="vertical"`` 时层自上而下、同层左右展开（``x0`` 是水平中线，
+    ``y0`` 是第一层的纵坐标）；``"horizontal"`` 时层自左向右、同层上下展开
+    （``x0`` 是第一层的横坐标，``y0`` 是垂直中线）。``dx``/``dy`` 是**间隙**，
+    实际推进量还会加上相邻层的节点厚度，避免方框相贴、连线被迫绕行。
+    """
     nodes = [n for n in diagram.nodes if n.meta.get("auto", True)]
     if not nodes:
         return
@@ -50,18 +57,42 @@ def layered(diagram: Diagram, x0: float = 120, y0: float = 120,
     for nid, lv in level.items():
         buckets.setdefault(lv, []).append(nid)
 
-    y = y0
-    max_rows = max(buckets.values(), key=len) if buckets else []
-    span = max(len(v) for v in buckets.values()) if buckets else 1
-    for lv in sorted(buckets):
+    # 先量出每个节点的实际尺寸：层间距按"最厚节点 + 间隙"推进，
+    # 固定间距会让菱形这类高节点几乎贴住邻居，连线只能绕大圈。
+    m = Measurer(diagram.theme, 1.0)
+    sizes = {}
+    for n in nodes:
+        n._geo = None
+        g = n.geometry(m)
+        sizes[n.id] = (g["w"], g["h"])
+
+    levels = sorted(buckets)
+    horizontal = orientation == "horizontal"
+    thick = {lv: max((sizes[i][0] if horizontal else sizes[i][1]) for i in buckets[lv])
+             for lv in levels}
+    centers = {}
+    advance_gap = dx if horizontal else dy
+    cur = x0 if horizontal else y0
+    for idx, lv in enumerate(levels):
+        if idx:
+            prev = levels[idx - 1]
+            cur += thick[prev] / 2 + advance_gap + thick[lv] / 2
+        centers[lv] = cur
+
+    cross_center = y0 if horizontal else x0
+    cross_gap = dy if horizontal else dx
+    for lv in levels:
         row = buckets[lv]
-        y = y0 + lv * dy
-        total = len(row)
+        pitch = max(sizes[i][1] if horizontal else sizes[i][0] for i in row) + cross_gap
         for i, nid in enumerate(row):
-            offset = (i - (total - 1) / 2) * dx
             node = diagram.node(nid)
-            node.x = x0 + (span - 1) / 2 * dx + offset
-            node.y = y
+            offset = (i - (len(row) - 1) / 2) * pitch
+            if horizontal:
+                node.x = centers[lv]
+                node.y = cross_center + offset
+            else:
+                node.x = cross_center + offset
+                node.y = centers[lv]
             node._geo = None
 
 

@@ -724,9 +724,12 @@ def _apply_layout(d: Diagram, name: str, direction: str = "down", **opts) -> Non
         return
     if name == "layered":
         if direction == "right":
-            layout.layered(d, x0=200, y0=160, dx=320, dy=150)
+            # 横向：x0 是第一层横坐标、y0 是垂直中线，dx 为层间隙、dy 为同层行距
+            layout.layered(d, x0=200, y0=320, dx=170, dy=110,
+                           orientation="horizontal")
         else:
-            layout.layered(d, x0=200, y0=140, dx=300, dy=150)
+            # 纵向：x0 是水平中线、y0 是第一层纵坐标，dx 为同层列距、dy 为层间隙
+            layout.layered(d, x0=360, y0=140, dx=90, dy=120)
         return
     layout.apply(d, name, **opts)
 
