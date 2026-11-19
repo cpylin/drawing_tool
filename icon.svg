@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Diagram kit">
+  <title>Diagram kit</title>
+  <!-- 圆角底板 -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#EEF3FC" stroke="#4A6591" stroke-width="2"/>
+  <!-- 连接线：根节点到两个子节点 -->
+  <path d="M32 24 V31 M32 31 H18 V38 M32 31 H46 V38"
+        fill="none" stroke="#4A6591" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 根节点 -->
+  <rect x="22" y="10" width="20" height="13" rx="4" fill="#C9D9F5" stroke="#2C4C88" stroke-width="2"/>
+  <!-- 左子节点 -->
+  <rect x="8" y="38" width="20" height="13" rx="4" fill="#FFFFFF" stroke="#2C4C88" stroke-width="2"/>
+  <!-- 右子节点 -->
+  <rect x="36" y="38" width="20" height="13" rx="4" fill="#FFFFFF" stroke="#2C4C88" stroke-width="2"/>
+  <!-- 子节点内的小刻度，暗示表格/条目 -->
+  <path d="M12 43 H24 M12 47 H20 M40 43 H52 M40 47 H48"
+        stroke="#7A93BF" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

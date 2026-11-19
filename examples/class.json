@@ -1,0 +1,25 @@
+{
+  "kind": "class",
+  "title": "图2  领域模型（节选）",
+  "per_row": 2,
+  "classes": [
+    {"id": "user", "name": "User",
+     "attrs": ["- userId: str", "- creditScore: float"],
+     "meths": ["+ isVerified(): bool"]},
+    {"id": "stu", "name": "Student",
+     "attrs": ["- studentNo: str"],
+     "meths": ["+ publishItem(dto)", "+ confirmOrder(id)"]},
+    {"id": "item", "name": "Item",
+     "attrs": ["- itemId: str", "- price: float", "- state: ItemState"],
+     "meths": ["+ publish(): bool", "+ lock(buyerId)"]},
+    {"id": "order", "name": "Order",
+     "attrs": ["- orderId: str", "- state: str"],
+     "meths": ["+ confirm(): bool", "+ isTimeout(now): bool"]}
+  ],
+  "relations": [
+    {"from": "stu", "to": "user", "type": "generalization"},
+    {"from": "item", "to": "stu", "type": "association", "mul": "0..* : 1"},
+    {"from": "order", "to": "item", "type": "composition", "mul": "1 : 0..1"},
+    {"from": "stu", "to": "order", "type": "dependency"}
+  ]
+}

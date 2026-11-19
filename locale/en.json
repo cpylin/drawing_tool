@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Diagram kit",
+    "description": "Turns a JSON spec into a PNG diagram — flowcharts, data-flow diagrams, structure charts, UML use-case/class/sequence/activity/state diagrams, ER diagrams, mind maps and layered architecture — using a bundled Python renderer (Pillow only, no network access).",
+    "detail": "docs/DETAIL.md"
+  }
+}

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diagkit"
+version = "0.1.0"
+description = "Code-as-diagram renderer: JSON spec to PNG for flowcharts, DFDs, structure charts, UML, ER diagrams and more."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = ["Pillow>=9.0"]
+keywords = ["diagram", "diagram-as-code", "flowchart", "uml", "dfd", "png"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Graphics",
+]
+
+[project.urls]
+Homepage = "https://github.com/cpylin/drawing_tool"
+Repository = "https://github.com/cpylin/drawing_tool.git"
+Issues = "https://github.com/cpylin/drawing_tool/issues"
+
+[project.scripts]
+diagkit = "diagkit.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+packages = ["diagkit"]

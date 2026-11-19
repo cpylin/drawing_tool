@@ -1,0 +1,9 @@
+# Keep source files LF so the same tree works on Windows, Linux and CI.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ttf binary
+*.ttc binary

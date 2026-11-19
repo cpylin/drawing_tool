@@ -1,0 +1,21 @@
+# dsh-diagram-kit — bundle patch layer.
+#
+# Applied when a profile lists this package in `dsh.profile.bundles`
+# (`package.json` → `dsh.bundle.patch`). The row id equals the package name so
+# the plugin row, the settings entry and the package all agree.
+#
+# Optional configuration — uncomment and edit to override the defaults. Every key
+# is optional; omitted keys fall back to the environment probe in index.js.
+#
+#   pythonPath  absolute path to a Python with Pillow (skips the probe)
+#   outDir      default output directory for generated PNGs
+#   timeoutMs   per-render time limit (default 120000)
+#   scale       default supersampling factor 1–4 (default 2)
+- insert:
+    - id: dsh-diagram-kit
+      name: 'dsh-diagram-kit'
+      config:
+        # pythonPath: 'C:\path\to\python.exe'
+        # outDir: './figures'
+        timeoutMs: 120000
+        scale: 2

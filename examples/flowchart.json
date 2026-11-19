@@ -1,0 +1,23 @@
+{
+  "kind": "flowchart",
+  "title": "图1  商品发布流程",
+  "direction": "down",
+  "items": [
+    {"id": "s", "shape": "start", "text": "开始"},
+    {"id": "a", "shape": "process", "text": "填写商品信息"},
+    {"id": "d", "shape": "decision", "text": "认证通过?"},
+    {"id": "r", "shape": "process", "text": "提示完成认证"},
+    {"id": "b", "shape": "process", "text": "违禁品拦截"},
+    {"id": "c", "shape": "process", "text": "写入商品表"},
+    {"id": "e", "shape": "end", "text": "结束"}
+  ],
+  "links": [
+    {"from": "s", "to": "a"},
+    {"from": "a", "to": "d"},
+    {"from": "d", "to": "b", "label": "是"},
+    {"from": "d", "to": "r", "label": "否"},
+    {"from": "r", "to": "e"},
+    {"from": "b", "to": "c"},
+    {"from": "c", "to": "e"}
+  ]
+}
