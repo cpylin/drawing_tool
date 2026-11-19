@@ -6,7 +6,7 @@
 * 构建 + 渲染 —— 12 种图都能出图，尺寸合理，重复渲染稳定
 * 细节正确性 —— 文字不会超出方框、主题切换不报错、PNG 落盘
 
-运行：``python -m unittest discover -s tests -v``（在项目根目录 D:\Desktop\drawing 下）
+运行：``python -m unittest discover -s tests -v``（在项目根目录下）
 """
 from __future__ import annotations
 
@@ -188,12 +188,11 @@ class TestRouting(unittest.TestCase):
         original = Renderer._edge
 
         def spy(renderer, edge, router, blocked):
-            anchor = renderer.edge_anchors.get(id(edge), {})
-            start, end = anchor.get("src"), anchor.get("dst")
-            if edge.route is not None:
-                pts = [renderer.gp(p) for p in edge.route]
-            else:
-                pts = router.route(start, end, blocked, (edge.src_side, edge.dst_side))
+            # 规划阶段已经把最终折线放在 edge_routes 里，直接取即可
+            pts = renderer.edge_routes.get(id(edge))
+            if pts is None:
+                anchor = renderer.edge_anchors.get(id(edge), {})
+                pts = [anchor.get("src"), anchor.get("dst")]
             records.append((edge, pts))
             return original(renderer, edge, router, blocked)
 

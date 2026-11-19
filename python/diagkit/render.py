@@ -60,6 +60,7 @@ class Renderer:
         self.offset: Point = (0.0, 0.0)
         self.geos: Dict[int, dict] = {}
         self.edge_anchors: Dict[int, dict] = {}
+        self.edge_routes: Dict[int, List[Point]] = {}
         self._label_jobs: List[Tuple[Label, List[Point], Optional[Point]]] = []
         self.placed_labels: List[Tuple[float, float, float, float]] = []
         self.placed_label_items: List[Tuple[str, Tuple[float, float, float, float]]] = []
@@ -195,10 +196,10 @@ class Renderer:
         pad = margin * self.scale * 0.35
         ext_x = (max([b[2] for b in blocked] or [self.width * self.scale - pad])) + pad
         ext_y = (max([b[3] for b in blocked] or [self.height * self.scale - pad])) + pad
-        router = Router(ext_x, ext_y, step=max(4, int(self.theme.grid * self.scale)))
+        self._plan_routes(blocked, ext_x, ext_y)
         self._label_jobs = []
         for edge in d.edges:
-            self._edge(edge, router, blocked)
+            self._edge(edge, None, blocked)
 
         # 7) 图元
         for n in d.nodes:
@@ -350,16 +351,107 @@ class Renderer:
             self.draw.text((cx, 60 * self.scale), subtitle, font=fs, fill=p.muted,
                            anchor="mm")
 
-    def _edge(self, edge: Edge, router: Router, blocked):
+    # ------------------------------------------------------------ 路由规划
+    def _edge_distance(self, edge: Edge) -> float:
+        if edge.route is not None:
+            pts = [self.gp(p) for p in edge.route]
+            return sum(abs(b[0] - a[0]) + abs(b[1] - a[1])
+                       for a, b in zip(pts, pts[1:]))
+        anchor = self.edge_anchors.get(id(edge), {})
+        start, end = anchor.get("src"), anchor.get("dst")
+        if start is None or end is None:
+            return 0.0
+        return abs(end[0] - start[0]) + abs(end[1] - start[1])
+
+    @staticmethod
+    def _proper_intersection(p1, p2, p3, p4) -> bool:
+        def orient(a, b, c):
+            v = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            return 0 if abs(v) < 1e-9 else (1 if v > 0 else -1)
+
+        if orient(p1, p2, p3) == orient(p1, p2, p4):
+            return False
+        if orient(p3, p4, p1) == orient(p3, p4, p2):
+            return False
+
+        def param(a, b, c, d):
+            d1 = (b[0] - a[0], b[1] - a[1])
+            d2 = (d[0] - c[0], d[1] - c[1])
+            den = d1[0] * d2[1] - d1[1] * d2[0]
+            if abs(den) < 1e-9:
+                return 0.0
+            return ((c[0] - a[0]) * d2[1] - (c[1] - a[1]) * d2[0]) / den
+
+        return all(1e-6 < t < 1 - 1e-6 for t in
+                   (param(p1, p2, p3, p4), param(p3, p4, p1, p2)))
+
+    def _route_crossings(self, routes: Dict[int, List[Point]]) -> int:
+        paths = list(routes.values())
+        count = 0
+        for i in range(len(paths)):
+            for j in range(i + 1, len(paths)):
+                for a1, a2 in zip(paths[i], paths[i][1:]):
+                    for b1, b2 in zip(paths[j], paths[j][1:]):
+                        if self._proper_intersection(a1, a2, b1, b2):
+                            count += 1
+        return count
+
+    def _plan_routes(self, blocked, ext_x, ext_y) -> None:
+        """按几种顺序各布一次线，取交叉最少的那一版。
+
+        先画的线占住通道，后画的线会绕行；因此从长边先画、短边先画得到的
+        结果不同，而不同字体宽度下最优顺序也会变化。试三种顺序（原始、
+        长边优先、短边优先）成本很低，却能让"没有交叉"在换字体后依然成立。
+        """
+        d = self.diagram
+        base = list(d.edges)
+        index = {id(edge): i for i, edge in enumerate(base)}
+        longest = sorted(base, key=lambda e: (-self._edge_distance(e), index[id(e)]))
+        shortest = sorted(base, key=lambda e: (self._edge_distance(e), index[id(e)]))
+        orders = [base]
+        if longest != base:
+            orders.append(longest)
+        if shortest != longest and shortest != base:
+            orders.append(shortest)
+
+        step = max(4, int(self.theme.grid * self.scale))
+        best_routes: Dict[int, List[Point]] = {}
+        best_crossings = None
+        for order in orders:
+            router = Router(ext_x, ext_y, step=step)
+            routes: Dict[int, List[Point]] = {}
+            for edge in order:
+                if edge.route is not None:
+                    pts = [self.gp(p) for p in edge.route]
+                else:
+                    anchor = self.edge_anchors.get(id(edge), {})
+                    start = anchor.get("src") or self._anchor(d.node(edge.src), edge.src_side)
+                    end = anchor.get("dst") or self._anchor(d.node(edge.dst), edge.dst_side)
+                    pts = router.route(start, end, blocked,
+                                       (edge.src_side, edge.dst_side))
+                routes[id(edge)] = pts
+                router.occupy(pts)
+            crossings = self._route_crossings(routes)
+            if best_crossings is None or crossings < best_crossings:
+                best_routes, best_crossings = routes, crossings
+            if best_crossings == 0:
+                break
+        self.edge_routes = best_routes
+
+    def _edge(self, edge: Edge, router: Optional[Router], blocked):
         src, dst = self.diagram.node(edge.src), self.diagram.node(edge.dst)
         anchor = self.edge_anchors.get(id(edge), {})
         start = anchor.get("src") or self._anchor(src, edge.src_side)
         end = anchor.get("dst") or self._anchor(dst, edge.dst_side)
         # 路由在图像像素上进行，起点终点都已是图像像素
-        if edge.route:
-            pts = [self.gp(p) for p in edge.route]
-        else:
-            pts = router.route(start, end, blocked, (edge.src_side, edge.dst_side))
+        pts = self.edge_routes.get(id(edge))
+        if pts is None:
+            if edge.route:
+                pts = [self.gp(p) for p in edge.route]
+            elif router is not None:
+                pts = router.route(start, end, blocked, (edge.src_side, edge.dst_side))
+            else:
+                pts = [start, end]
         color = self.theme.palette.ink
         if edge.style == "dashed":
             shapes.draw_dashed(self.draw, pts, self.ew, color, 12 * self.scale, 9 * self.scale)
@@ -375,7 +467,8 @@ class Renderer:
         if edge.label is not None and not edge.label.empty:
             self._label_jobs.append((edge.label, pts, edge.label_at))
         # 登记这条线的通道：后面的线会绕开它，而不是直接压过去
-        router.occupy(pts)
+        if router is not None:
+            router.occupy(pts)
 
     # ------------------------------------------------------------ 标签放置
     def _draw_edge_labels(self, blocked):

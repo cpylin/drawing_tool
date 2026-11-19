@@ -149,12 +149,30 @@ def dfd(entities: Sequence[dict], processes: Sequence[dict],
 
     row = {n.id: i for order in columns for i, n in enumerate(order)}
     col = {n.id: c for c, order in enumerate(columns) for n in order}
+    m = Measurer(d.theme, 1.0)
+    store_right = max((n.geometry(m)["right"] for n in columns[2]),
+                      default=None)
     for f, edge in flows_with_edges:
         if "src_side" not in f and "dst_side" not in f and edge.route is None:
-            # 跨两行以上进入最右栏（数据存储）的长流，从右侧绕入：
-            # 否则它必须在存储栏左侧竖直穿过中间层的水平流。
-            if col.get(edge.dst) == 2 and abs(row.get(edge.dst, 0) - row.get(edge.src, 0)) >= 2:
-                edge.src_side, edge.dst_side = "r", "r"
+            # 跨两行以上进入最右栏（数据存储）的长流：沿存储栏右侧的
+            # 页边通道绕入。只改锚点还不够——A* 仍可能为了省路从中间
+            # 缝隙穿过；显式走外侧才能在任何字体宽度下都不压中间层的流。
+            if col.get(edge.dst) == 2 and abs(row.get(edge.dst, 0) - row.get(edge.src, 0)) >= 2 \
+                    and store_right is not None:
+                gs = d.node(edge.src).geometry(m)
+                gd = d.node(edge.dst).geometry(m)
+                channel = store_right + 36
+                # 横向出口放在源节点所在整行的下方，避免擦到同排其它框
+                row_bottom = max(
+                    (n.geometry(m)["bottom"] for n in columns[0] + columns[1]
+                     if row.get(n.id) == row.get(edge.src)),
+                    default=gs["bottom"],
+                )
+                y_exit = row_bottom + 20
+                edge.route = [(gs["x"], gs["bottom"]), (gs["x"], y_exit),
+                              (channel, y_exit), (channel, gd["y"]),
+                              (gd["right"], gd["y"])]
+                edge.src_side = edge.dst_side = "c"
             else:
                 edge.src_side, edge.dst_side = "r", "l"
         else:
